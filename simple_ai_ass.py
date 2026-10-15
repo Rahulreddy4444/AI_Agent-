@@ -1,5 +1,7 @@
+import json
 from openai import OpenAI
 from  dotenv import load_dotenv
+from tools import TOOLS, FUNCTION_NAME_TO_FUNCTION_MAP
 import os
 
 load_dotenv() #by default it will look for a .env file in the current directory
@@ -30,12 +32,41 @@ while True:
 
     response = client.chat.completions.create(
         model=os.getenv("MODEL"),
-        messages=messages
+        messages=messages,
+        tools=TOOLS,
     )
 
+    msg = response.choices[0].message
+    if msg.tool_calls:
+        messages.append(msg)
+
+        for tool_call in msg.tool_calls:
+            func_name = tool_call.function.name
+            func_args = json.loads(tool_call.function.arguments or "{}")
+
+            fn = FUNCTION_NAME_TO_FUNCTION_MAP.get(func_name)
+            result = fn(**func_args) if fn else None
+
+            messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": str(result)
+            })
+
+        # 2nd call to the model after tool execution
+        response = client.chat.completions.create(
+            model=os.getenv("MODEL"),
+            messages=messages,
+            tools=TOOLS,
+        )
+
+        msg = response.choices[0].message
+        
+
+ 
     messages.append(
-        {"role": response.choices[0].message.role,
-         "content": response.choices[0].message.content}
+        {"role": "assistant",
+         "content": msg.content}
     )
 
-    print("Assistant:", response.choices[0].message.content)
+    print("Assistant:", msg.content)
