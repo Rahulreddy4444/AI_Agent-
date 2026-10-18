@@ -9,6 +9,9 @@ def get_city_weather(city: str):
     response = requests.get(url, timeout=10)
     return response.text if response.status_code == 200 else "Could not retrieve weather information."
 
+def get_city():
+    return "Bangalore"
+
 # TOOLS = [{}, {}, ..]
 TOOLS = [
     {
@@ -39,10 +42,23 @@ TOOLS = [
                 "required": ["city"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function":{
+            "name": "get_city",
+            "description": "Returns the name of the city.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
     }
 ]
 
 FUNCTION_NAME_TO_FUNCTION_MAP = {
     "get_current_time": get_current_time,
     "get_city_weather": get_city_weather,
+    "get_city": get_city
 }
