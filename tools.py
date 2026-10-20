@@ -1,5 +1,8 @@
 from datetime import datetime
+import json
 import requests
+
+from Utilities.utilities import log
 
 def get_current_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -7,6 +10,7 @@ def get_current_time():
 def get_city_weather(city: str):
     url = f"https://wttr.in/{city}?format=3"
     response = requests.get(url, timeout=10)
+    response.raise_for_status()  # Raise an exception for HTTP errors
     return response.text if response.status_code == 200 else "Could not retrieve weather information."
 
 def get_city():
@@ -62,3 +66,19 @@ FUNCTION_NAME_TO_FUNCTION_MAP = {
     "get_city_weather": get_city_weather,
     "get_city": get_city
 }
+
+def run_tool(tool_call):
+    func_name = tool_call.function.name
+    func_args = {}
+    
+    try:
+        func_args = json.loads(tool_call.function.arguments or "{}")
+        log(f"🛠️  {func_name}({func_args})")
+        fn = FUNCTION_NAME_TO_FUNCTION_MAP.get(func_name)
+        result = fn(**func_args) if fn else None
+    except Exception as e:
+        result = f"Error executing function '{func_name}': {str(e)}"
+    
+    log(f"  ⤷ {func_name} returned: {result}")
+
+    return str(result)

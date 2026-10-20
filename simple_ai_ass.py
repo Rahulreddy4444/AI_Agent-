@@ -1,8 +1,15 @@
+# standard library imports
 import json
+import os
+
+# third-party imports
+import requests
 from openai import OpenAI
 from  dotenv import load_dotenv
-from tools import TOOLS, FUNCTION_NAME_TO_FUNCTION_MAP
-import os
+
+# local module imports
+from tools import TOOLS, run_tool
+from Utilities.utilities import log
 
 load_dotenv() #by default it will look for a .env file in the current directory
 
@@ -34,7 +41,7 @@ while True:
     )
 
     #chain tool-calling 
-    for _ in range(MAX_STEPS):
+    for step in range(MAX_STEPS):
         response = client.chat.completions.create(
                 model=os.getenv("MODEL"),
                 messages=messages,
@@ -46,18 +53,12 @@ while True:
         if not msg.tool_calls:
             break
 
+        log(f"Step {step + 1}: model requested {len(msg.tool_calls)} tool call(s).")
+
         messages.append(msg)
 
         for tool_call in msg.tool_calls:
-            func_name = tool_call.function.name
-            func_args = {}
-
-            try:
-                func_args = json.loads(tool_call.function.arguments or "{}")
-                fn = FUNCTION_NAME_TO_FUNCTION_MAP.get(func_name)
-                result = fn(**func_args) if fn else None
-            except Exception as e:
-                result = f"Error executing function '{func_name}': {str(e)}"
+            result = run_tool(tool_call)
 
             messages.append({
                 "role": "tool",
@@ -70,7 +71,7 @@ while True:
         messages.append({
             "role": "assistant", 
             "content": fallback_response})
-        print("Assistant:", fallback_response)
+        print("☸Assistant:", fallback_response)
         continue
 
  
@@ -79,4 +80,4 @@ while True:
          "content": msg.content}
     )
 
-    print("Assistant:", msg.content)
+    print("Assistant:", (msg.content or ""))
