@@ -2,6 +2,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 import numpy as np
+import json
 
 load_dotenv()
 
@@ -12,6 +13,7 @@ clinet = OpenAI(
 
 EMBED_MODEL = os.getenv("EMBEDDING_MODEL")
 KB_FOLDER = os.getenv("KB_FOLDER")
+VECTOR_STORE_FILE = os.getenv("VECTOR_STORE_FILE")
 
 # load the documentation files from the knowledge base folder
 def load_documents(folder=KB_FOLDER):
@@ -120,10 +122,29 @@ def test(user_query, chunks, top_k=3):
         print(f"Text: {result['text'][:200]}...")  # Print first 200 characters of the text
 
 
+def save_vector_store(chunks):
+    with open(VECTOR_STORE_FILE, "w", encoding="utf-8") as f:
+        json.dump(chunks, f, ensure_ascii=False, indent=4)
+
+
+def load_vector_store():
+    if os.path.exists(VECTOR_STORE_FILE):
+        with open(VECTOR_STORE_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    else:
+        return None
 
 # example usage
-chunks = create_chunks_from_documents()
-chunks = add_embeddings(chunks)
+chunks = []
+
+if os.path.exists(VECTOR_STORE_FILE):
+    print(f"Loading vector store from '{VECTOR_STORE_FILE}'...")
+    chunks = load_vector_store()
+else:
+    chunks = create_chunks_from_documents()
+    chunks = add_embeddings(chunks)
+    save_vector_store(chunks)
+    print(f"Vector store saved to '{VECTOR_STORE_FILE}'.")
 
 print(f"we have embedded {len(chunks)} chunks from the knowledge base folder: '{KB_FOLDER}'")
 
