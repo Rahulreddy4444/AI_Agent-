@@ -3,6 +3,7 @@ import json
 import requests
 
 from Utilities.utilities import log
+from rag import search
 
 def get_current_time():
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -15,6 +16,29 @@ def get_city_weather(city: str):
 
 def get_city():
     return "Bangalore"
+
+def search_knowledge_base(query):
+    results = search(query, top_k=3)
+
+    log(f"🔍 Search results for query: '{query}'")
+    for r in results:
+        log(f"  ⤷ Similarity: {r['similarity']:.4f}, Source: {r['source']}, Size: {r['size']}")
+        log(f"      Text: {r['text'][:100]}...")  # Log first 100 characters of the text
+
+    blocks = []
+    for r in results:
+        sourceFilename = r['source']
+        chunkId = r['chunk_id'] if 'chunk_id' in r else None
+        chunktext = r['text']
+
+        header = f"[{sourceFilename} #{chunkId}]"
+        block = f"{header}\n{chunktext}"
+        blocks.append(block)
+
+    return "\n\n".join(blocks)
+
+
+
 
 # TOOLS = [{}, {}, ..]
 TOOLS = [
@@ -58,13 +82,33 @@ TOOLS = [
                 "required": []
             }
         }
+    },
+    {
+        "type": "function",
+        "function":{
+            "name": "search_knowledge_base",
+            "description": "Searches the zorvex technologies company knowledge base: leave, HR, medical, hiring, tech, incident"
+                            "reports and travel expense policies. use it for any quesiton about the company policies or documents."
+                            "returns the most relevant passages with their source.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The query string to search in the knowledge base."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
     }
 ]
 
 FUNCTION_NAME_TO_FUNCTION_MAP = {
     "get_current_time": get_current_time,
     "get_city_weather": get_city_weather,
-    "get_city": get_city
+    "get_city": get_city,
+    "search_knowledge_base": search_knowledge_base
 }
 
 def run_tool(tool_call):

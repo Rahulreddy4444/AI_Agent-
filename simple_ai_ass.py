@@ -22,7 +22,15 @@ client = OpenAI(
 messages = []
 messages.append(
     {"role": "system", 
-     "content": "You are a general-purpose assistant. Answer questions about programming and other topics directly. Use the available tools only when a request needs current time, weather, or city information. Do not claim your capabilities are limited to those tools."}
+     "content": "You are a helpful, humble assistant for employees of Zorvex Technology. "
+                "Answer questions about programming and other topics clearly and directly. "
+                "Use the provided knowledge-base context to answer company-specific questions, "
+                "including policies, leave, benefits, and procedures. Treat that context as the "
+                "source of truth; do not guess or invent company rules. If the context does not "
+                "contain the answer or is unclear, say so and suggest contacting the appropriate "
+                "company team. Use the available tools only when a request requires current time, "
+                "weather, or city-related information. For other requests, answer directly without "
+                "using tools. Do not imply that your capabilities are limited to those tools."}
 )
 
 # safety limit to avoid infinite loops in case of tool-calling
@@ -95,7 +103,7 @@ def build_tool_calls_payload(tool_calls):
             "id": tool_call.id,
             "function": {
                 "name": tool_call.function.name,
-                "arguments": json.loads(tool_call.function.arguments)
+                "arguments": tool_call.function.arguments
             }
         })
     return payload
